@@ -2,5 +2,5 @@
 simple serial communication terminal
 
 requirements:
-  -python
-  -pyserial
+  -python\n
+  -pyserial\n
