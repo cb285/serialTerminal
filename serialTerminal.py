@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# file: serTerm.py
+# file: serialTerminal.py
 # simple serial terminal
 
 import serial
