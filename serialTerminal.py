@@ -6,6 +6,7 @@
 import serial
 import time
 import sys
+import readline
 
 def attemptSerConn(ser):
 
@@ -23,7 +24,7 @@ def attemptSerConn(ser):
             print "connection successful."
             ser.flushInput()	# flush buffers (just in case)
             ser.flushOutput()
-            return
+            return ser
         
         except serial.SerialException:
             if (num_attempts > 0):
@@ -47,27 +48,24 @@ def main(args):
     ser = serial.Serial()
     ser.port = port
     ser.baudrate = baudrate
-    ser.bytesize = serial.EIGHTBITS
-    ser.parity = serial.PARITY_NONE
-    ser.stopbits = serial.STOPBITS_ONE
-    ser.timeout = 1			# read timeout
-    ser.xonxoff = False			# software flow control
-    ser.rtscts = False			# hardware (RTS/CTS) flow control
-    ser.dsrdtr = False			# hardware (DSR/STR) flow control
-    #ser.write_timeout = 0		# write timeout
+    ser.timeout = .5			# read timeout
+    ser.write_timeout = .5		# write timeout
     ser.inter_byte_timeout = None	# inter-character timeout
     ser.exclusive = True		# exclusive access mode (POSIX only)
     
     attemptSerConn(ser) # attempt connection
-    
+
     # run terminal interface:
     try:
         while (True):
             try:
-                command = raw_input(">")
-                ser.write(command)
-                msg = ser.readline().strip()
-                print msg
+                command = raw_input(">").strip()
+                if (command == ""):
+                    continue
+                ser.write(command + "\r")
+                responses = ser.readlines() #.strip()
+                for resp in responses:
+                    print resp.strip()
                 
             except serial.SerialException:
                 choice = raw_input("serial connection failed. retry? (Y/n) ").strip()
