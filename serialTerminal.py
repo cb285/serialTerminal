@@ -7,32 +7,33 @@ import serial
 import time
 import sys
 import readline
+import glob
 
-def attemptSerConn(ser):
-
-    CONN_ATTEMPTS = 3  	# number of times to try serial connection
-    CONN_INTERVAL = 5 	# time between serial connection attempts (seconds)
+def attemptSerConn(port, baudrate):
     
-    print "attempting connection..."
+    if (len(glob.glob(port)) == 0):
+        print "port not available. check connection."
+        return False
     
-    num_attempts = CONN_ATTEMPTS
+    # setup serial connection:
+    ser = serial.Serial()
+    ser.port = port
+    ser.baudrate = baudrate
+    ser.timeout = .25			# read timeout
+    ser.write_timeout = .25		# write timeout
+    ser.inter_byte_timeout = None	# inter-character timeout
+    ser.exclusive = True		# exclusive access mode (POSIX only)
     
-    while(num_attempts > 0):
-        try:
-            num_attempts -= 1
-            ser.open()
-            print "connection successful."
-            ser.flushInput()	# flush buffers (just in case)
-            ser.flushOutput()
-            return ser
+    try:
+        ser.open()
+        print "connection successful. press CTRL+C to quit."
+        ser.flushInput()	# flush buffers (just in case)
+        ser.flushOutput()
+        return ser
         
-        except serial.SerialException:
-            if (num_attempts > 0):
-                time.sleep(CONN_INTERVAL)
-                continue
-            else:
-                print "connection failed for all " + str(CONN_ATTEMPTS) + " attempts.\n"
-                exit(1)
+    except serial.SerialException:
+        print "connection failed.\n"
+        return False
                 
 
 def main(args):
@@ -43,44 +44,39 @@ def main(args):
     # get port and baudrate from arguments
     port = args[1]
     baudrate = int(args[2])
-    
-    # setup serial connection:
-    ser = serial.Serial()
-    ser.port = port
-    ser.baudrate = baudrate
-    ser.timeout = .5			# read timeout
-    ser.write_timeout = .5		# write timeout
-    ser.inter_byte_timeout = None	# inter-character timeout
-    ser.exclusive = True		# exclusive access mode (POSIX only)
-    
-    attemptSerConn(ser) # attempt connection
 
+    ser = attemptSerConn(port, baudrate) # attempt connection
+    
+    if (not ser):
+        return 1
+    
     # run terminal interface:
-    try:
-        while (True):
-            try:
-                command = raw_input(">").strip()
-                if (command == ""):
+    while (True):
+        try:
+            command = raw_input(">").strip()
+            if (command == ""):
+                continue
+            ser.write(command + "\r")
+            responses = ser.readlines() #.strip()
+            for resp in responses:
+                print resp.strip()
+                
+        except serial.SerialException:
+            choice = raw_input("serial connection failed. retry? (Y/n) ").strip()
+            if (choice == "Y" or choice == ""):
+                ser = attemptSerConn(port, baudrate)
+                if (not ser):
+                    return 1
+                else:
                     continue
-                ser.write(command + "\r")
-                responses = ser.readlines() #.strip()
-                for resp in responses:
-                    print resp.strip()
-                
-            except serial.SerialException:
-                choice = raw_input("serial connection failed. retry? (Y/n) ").strip()
-                if (choice == "Y" or choice == ""):
-                    attemptSerConn(ser)
-                    continue
-                
-                print "\n",
-                exit(1)
-                
-    except KeyboardInterrupt: # If CTRL+C is pressed
-        ser.close()		# close serial connection
-        print "\n",
-
+            else:
+                return 1
+            
+        except KeyboardInterrupt: # If CTRL+C is pressed
+            ser.close()		# close serial connection
+            print "\n",
+            return 0
 
 # run
 if __name__ == "__main__":
-    main(sys.argv)
+    exit(main(sys.argv))
