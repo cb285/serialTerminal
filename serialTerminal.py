@@ -23,6 +23,7 @@ def attemptSerConn(port, baudrate):
     ser.write_timeout = .25		# write timeout
     ser.inter_byte_timeout = None	# inter-character timeout
     ser.exclusive = True		# exclusive access mode (POSIX only)
+    ser.setDTR(True)
     
     try:
         ser.open()
@@ -34,7 +35,6 @@ def attemptSerConn(port, baudrate):
     except serial.SerialException:
         print("connection failed.\n")
         return False
-                
 
 def main(args):
     if (len(args) != 3):
@@ -53,16 +53,19 @@ def main(args):
     # run terminal interface:
     while (True):
         try:
-            command = raw_input(">").strip()
+
+            waiting_bytes = ser.inWaiting()
+            while(waiting_bytes != 0):
+                print(ser.readline())
+                waiting_bytes = ser.inWaiting()
+            
+            command = input(">").strip()
             if (command == ""):
                 continue
             ser.write(command + "\r")
-            responses = ser.readlines() #.strip()
-            for resp in responses:
-                print(resp.strip())
                 
         except serial.SerialException:
-            choice = raw_input("serial connection failed. retry? (Y/n) ").strip()
+            choice = input("serial connection failed. retry? (Y/n) ").strip()
             if (choice == "Y" or choice == ""):
                 ser = attemptSerConn(port, baudrate)
                 if (not ser):
