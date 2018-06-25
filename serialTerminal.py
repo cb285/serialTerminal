@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # file: serialTerminal.py
 # simple serial terminal
@@ -12,7 +12,7 @@ import glob
 def attemptSerConn(port, baudrate):
     
     if (len(glob.glob(port)) == 0):
-        print "port not available. check connection."
+        print("port not available. check connection.")
         return False
     
     # setup serial connection:
@@ -26,19 +26,19 @@ def attemptSerConn(port, baudrate):
     
     try:
         ser.open()
-        print "connection successful. press CTRL+C to quit."
+        print("connection successful. press CTRL+C to quit.")
         ser.flushInput()	# flush buffers (just in case)
         ser.flushOutput()
         return ser
         
     except serial.SerialException:
-        print "connection failed.\n"
+        print("connection failed.\n")
         return False
                 
 
 def main(args):
     if (len(args) != 3):
-        print "USAGE: " + args[0] + " <port> <baudrate>"
+        print("USAGE: " + args[0] + " <port> <baudrate>")
         exit(0)
         
     # get port and baudrate from arguments
@@ -59,7 +59,7 @@ def main(args):
             ser.write(command + "\r")
             responses = ser.readlines() #.strip()
             for resp in responses:
-                print resp.strip()
+                print(resp.strip())
                 
         except serial.SerialException:
             choice = raw_input("serial connection failed. retry? (Y/n) ").strip()
@@ -74,7 +74,7 @@ def main(args):
             
         except KeyboardInterrupt: # If CTRL+C is pressed
             ser.close()		# close serial connection
-            print "\n",
+            print("\n",)
             return 0
 
 # run
