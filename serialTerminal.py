@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
-# file: serialTerminal.py
-# simple serial terminal
-
 import serial
 import time
 import sys
 import readline
 import glob
+import threading
+
+ENDL = "\r"
+ENCODING = "ascii"
+INTERBYTE_WAIT = 0.01 # seconds between sending bytes (required for proper receiving)
 
 def attemptSerConn(port, baudrate):
     
@@ -19,23 +21,59 @@ def attemptSerConn(port, baudrate):
     ser = serial.Serial()
     ser.port = port
     ser.baudrate = baudrate
+    ser.bytesize = serial.EIGHTBITS
+    ser.parity = serial.PARITY_NONE
+    ser.stopbits = serial.STOPBITS_ONE
     ser.timeout = .25			# read timeout
     ser.write_timeout = .25		# write timeout
     ser.inter_byte_timeout = None	# inter-character timeout
     ser.exclusive = True		# exclusive access mode (POSIX only)
-    ser.setDTR(True)
     
-    try:
-        ser.open()
-        print("connection successful. press CTRL+C to quit.")
-        ser.flushInput()	# flush buffers (just in case)
-        ser.flushOutput()
-        return ser
-        
-    except serial.SerialException:
-        print("connection failed.\n")
-        return False
+    #try:
+    ser.open()
+    print("connection successful. press CTRL+C to quit.")
+    ser.flushInput()	# flush buffers (just in case)
+    ser.flushOutput()
+    return ser
 
+    #except serial.SerialException:
+    #print("connection failed.\n")
+    #return False
+
+def ser_write(ser, bytes_to_write):
+
+    # write ENDL before sending data
+    ser.write(ENDL.encode(ENCODING))
+    
+    # wait between bytes
+    time.sleep(INTERBYTE_WAIT)
+
+    # for each byte
+    for a_byte in bytes_to_write:
+        # write byte to serial port
+        ser.write(a_byte.encode(ENCODING))
+
+        # wait between bytes
+        time.sleep(INTERBYTE_WAIT)
+
+    # write ENDL
+    ser.write(ENDL.encode(ENCODING))
+
+def rx_printer(ser):
+
+    out = ""
+    
+    while(1):
+        while(ser.inWaiting() > 0):
+            c = ser.read(1).decode(ENCODING)
+            if(c == "\r" or c == "\n"):
+                out = out.strip()
+                if(out != ""):
+                    print(out)
+                out = ""
+            #print(c)
+            out += c
+    
 def main(args):
     if (len(args) != 3):
         print("USAGE: " + args[0] + " <port> <baudrate>")
@@ -44,41 +82,25 @@ def main(args):
     # get port and baudrate from arguments
     port = args[1]
     baudrate = int(args[2])
-
+    
     ser = attemptSerConn(port, baudrate) # attempt connection
     
     if (not ser):
         return 1
-    
-    # run terminal interface:
-    while (True):
-        try:
 
-            waiting_bytes = ser.inWaiting()
-            while(waiting_bytes != 0):
-                print(ser.readline())
-                waiting_bytes = ser.inWaiting()
-            
-            command = input(">").strip()
-            if (command == ""):
-                continue
-            ser.write(command + "\r")
-                
-        except serial.SerialException:
-            choice = input("serial connection failed. retry? (Y/n) ").strip()
-            if (choice == "Y" or choice == ""):
-                ser = attemptSerConn(port, baudrate)
-                if (not ser):
-                    return 1
-                else:
-                    continue
-            else:
-                return 1
-            
-        except KeyboardInterrupt: # If CTRL+C is pressed
-            ser.close()		# close serial connection
-            print("\n",)
-            return 0
+    # setup receiver thread
+    rx_thread = threading.Thread(target=rx_printer, args=(ser,))
+    rx_thread.start()
+    
+    try:
+        while(1):
+            cmd = input(">>")
+            ser_write(ser, cmd)
+
+    except KeyboardInterrupt: # If CTRL+C is pressed
+        ser.close()		# close serial connection
+        print("\n",)
+        return 0
 
 # run
 if __name__ == "__main__":
