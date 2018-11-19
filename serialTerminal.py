@@ -9,7 +9,6 @@ import threading
 
 ENDL = "\r"
 ENCODING = "ascii"
-INTERBYTE_WAIT = 0.01 # seconds between sending bytes (required for proper receiving)
 
 def attemptSerConn(port, baudrate):
     
@@ -32,7 +31,7 @@ def attemptSerConn(port, baudrate):
     #try:
     ser.open()
     print("connection successful. press CTRL+C to quit.")
-    ser.flushInput()	# flush buffers (just in case)
+    ser.flushInput() # flush buffers
     ser.flushOutput()
     return ser
 
@@ -43,18 +42,12 @@ def attemptSerConn(port, baudrate):
 def ser_write(ser, bytes_to_write):
 
     # write ENDL before sending data
-    ser.write(ENDL.encode(ENCODING))
+    #ser.write(ENDL.encode(ENCODING))
     
-    # wait between bytes
-    time.sleep(INTERBYTE_WAIT)
-
     # for each byte
     for a_byte in bytes_to_write:
         # write byte to serial port
         ser.write(a_byte.encode(ENCODING))
-
-        # wait between bytes
-        time.sleep(INTERBYTE_WAIT)
 
     # write ENDL
     ser.write(ENDL.encode(ENCODING))
@@ -94,7 +87,7 @@ def main(args):
     
     try:
         while(1):
-            cmd = input(">>")
+            cmd = input("")
             ser_write(ser, cmd)
 
     except KeyboardInterrupt: # If CTRL+C is pressed
