@@ -6,9 +6,12 @@ import sys
 import readline
 import glob
 import threading
+import os
 
 ENDL = "\r"
 ENCODING = "ascii"
+
+HIST_FILENAME = "serial_history"
 
 def attemptSerConn(port, baudrate):
     
@@ -81,6 +84,17 @@ def main(args):
     if (not ser):
         return 1
 
+    # check if history file exists
+    if(len(glob.glob(HIST_FILENAME)) == 0):
+        with open(HIST_FILENAME, 'a'):
+            os.utime(fname, None)
+        
+    # read history file
+    readline.read_history_file(HIST_FILENAME)
+
+    # enable auto history saving
+    #readline.set_auto_history(True)
+    
     # setup receiver thread
     rx_thread = threading.Thread(target=rx_printer, args=(ser,))
     rx_thread.start()
@@ -92,6 +106,8 @@ def main(args):
 
     except KeyboardInterrupt: # If CTRL+C is pressed
         ser.close()		# close serial connection
+        readline.write_history_file(HIST_FILENAME)
+        
         print("\n",)
         return 0
 
