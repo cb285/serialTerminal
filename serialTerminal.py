@@ -86,9 +86,10 @@ def main(args):
 
     # check if history file exists
     if(len(glob.glob(HIST_FILENAME)) == 0):
+        # create empty file
         with open(HIST_FILENAME, 'a'):
             os.utime(fname, None)
-        
+    
     # read history file
     readline.read_history_file(HIST_FILENAME)
 
